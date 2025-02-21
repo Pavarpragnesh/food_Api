@@ -26,6 +26,36 @@ const addFood = async (req, res) => {
   }
 };
 
+// Update food item
+const updateFood = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const food = await foodModel.findById(id);
+
+    if (!food) {
+      return res.status(404).json({ success: false, message: "Food item not found" });
+    }
+
+    // Remove old image if a new one is uploaded
+    if (req.file) {
+      fs.unlink(`uploads/${food.image}`, () => {});
+      food.image = req.file.filename;
+    }
+
+    // Update food details
+    food.name = req.body.name || food.name;
+    food.description = req.body.description || food.description;
+    food.price = req.body.price || food.price;
+    food.category = req.body.category || food.category;
+
+    await food.save();
+
+    res.json({ success: true, message: "Food Updated Successfully.", food });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Error", error });
+  }
+};
 //all food list
 const listFood = async (req,res) => {
   try{
@@ -37,6 +67,33 @@ const listFood = async (req,res) => {
     
   }
 }
+
+// List food with pagination
+const listFoodWithPagination = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const foods = await foodModel.find({}).skip(skip).limit(limit);
+    const total = await foodModel.countDocuments();
+
+    res.json({
+      success: true,
+      data: foods,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Error", error });
+  }
+};
+
 
 //remove food item
 const removeFood = async (req,res) => {
@@ -53,4 +110,4 @@ try{
 }
 
 
-export { addFood,listFood,removeFood };
+export { addFood,listFood,removeFood,updateFood,listFoodWithPagination  };
