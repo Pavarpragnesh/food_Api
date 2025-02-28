@@ -9,19 +9,13 @@ const razorpay = new Razorpay({
 });
 
 const placeOrder = async (req, res) => {
+  const frontend_url = process.env.FRONTEND_URL || "http://localhost:3000";
   try {
-
-    // console.log(process.env.RAZORPAY_KEY_ID,process.env.RAZORPAY_KEY_SECRET)
     const { items, amount, address } = req.body;
 
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Unauthorized. Please log in again.",
-        });
+      return res.status(401).json({ success: false, message: "Unauthorized. Please log in again." });
     }
 
     let userId;
@@ -29,21 +23,11 @@ const placeOrder = async (req, res) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       userId = decoded?.id;
       if (!userId) {
-        return res
-          .status(401)
-          .json({
-            success: false,
-            message: "Invalid token. Please log in again.",
-          });
+        return res.status(401).json({ success: false, message: "Invalid token. Please log in again." });
       }
     } catch (error) {
       console.error("JWT verification failed:", error);
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Session expired. Please log in again.",
-        });
+      return res.status(401).json({ success: false, message: "Session expired. Please log in again." });
     }
 
     const newOrder = new orderModel({
@@ -58,58 +42,95 @@ const placeOrder = async (req, res) => {
     await newOrder.save();
     await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-    // ✅ Create Razorpay Order
-    let razorpayOrder;
-    try {
-      razorpayOrder = await razorpay.orders.create(
-        {
-          amount: amount * 100,
-          currency: "INR",
-          receipt: newOrder._id.toString(),
-          payment_capture: 1,
-        },
-        (err, order) => {
-          console.log(err)
-          if (!err) {
-            res.status(200).send({
-              success: true,
-              msg: "Order Created",
-              order_id: order.id,
-              amount: amount,
-              key_id: process.env.RAZORPAY_KEY_ID,
-              product_name: req.body.name,
-              description: req.body.description,
-              contact: "8567345632",
-              name: "Pragnesh",
-              email: "patel@gmail.com",
-            });
-          } else {
-            res
-              .status(400)
-              .send({ success: false, msg: "Something went wrong!" });
-          }
-        }
-      );
-    } catch (error) {
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: "Payment gateway error. Please try again later.",
-        });
-    }
+    // ✅ Create Razorpay Order properly
+    let razorpayOrder = await razorpay.orders.create({
+      amount: amount * 100, // Convert to paise
+      currency: "INR",
+      receipt: newOrder._id.toString(),
+      payment_capture: 1,
+    });
 
-    return res.json({
+
+    return res.status(200).json({
       success: true,
       order_id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       key: process.env.RAZORPAY_KEY_ID,
+      success_url: `${frontend_url}/verify?success=true&orderId=${newOrder._id}`,
+      cancel_url: `${frontend_url}/verify?success=false&orderId=${newOrder._id}`,
       userId,
     });
+
   } catch (error) {
     console.error("Order Placement Error:", error);
-    // return res.status(500).json({ success: false, message: "An unexpected error occurred while processing your order. Please try again later." });
+    return res.status(500).json({ success: false, message: "An unexpected error occurred while processing your order. Please try again later." });
   }
 };
 
-export { placeOrder };
+const verifyOrder = async (req, res) => {
+  try {
+    const { orderId, success } = req.body;
+    
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
+
+  
+    if (success) {
+      const updatedOrder = await orderModel.findByIdAndUpdate(orderId, { payment: true }, { new: true });
+
+      if (!updatedOrder) {
+        return res.status(404).json({ success: false, message: "Order not found" });
+      }
+
+      return res.status(200).json({ success: true, message: "Payment successful", order: updatedOrder });
+    } else {
+      const deletedOrder = await orderModel.findByIdAndDelete(orderId);
+
+      if (!deletedOrder) {
+        return res.status(404).json({ success: false, message: "Order not found, possibly already deleted" });
+      }
+
+      return res.status(200).json({ success: false, message: "Payment failed, order deleted" });
+    }
+  } catch (error) {
+    console.error("Error in verifying order:", error);
+    return res.status(500).json({ success: false, message: "Server error while verifying payment" });
+  }
+};
+
+//users orders for frontend
+const userOrders = async (req,res) => {
+  try {
+    const orders = await orderModel.find({userId:req.body.userId});
+    res.json({success:true,data:orders});
+  } catch (error) {
+    console.log(error);
+    res.json({success:false,message:"Error"})
+  }
+}
+
+// Listing orders for admin pannel
+const listOrders = async (req, res) => {
+  try {
+      const orders = await orderModel.find({});
+      res.json({success:true,data:orders});
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: "Error" });
+  }
+};
+
+//api for updating order status
+const updateStatus = async (req,res) =>{
+  try {
+    await orderModel.findByIdAndUpdate(req.body.orderId,{status:req.body.status});
+    res.json({success:true,message:"Status Updated"});
+  } catch (error) {
+    console.log(error);
+    res.json({success:false,message:"Error"});
+  }
+}
+
+
+export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus };
