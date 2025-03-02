@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import authMiddleware from "../middleware/auth.js";
 import { addCategory, listCategories, updateCategory, removeCategory } from "../controllers/categoryController.js";
 
 const categoryRouter = express.Router();
@@ -20,6 +21,6 @@ const upload = multer({ storage });
 categoryRouter.post("/add", upload.single("image"), addCategory);
 categoryRouter.post("/update", upload.single("image"), updateCategory);
 categoryRouter.post("/remove", removeCategory);
-categoryRouter.get("/list", listCategories);
+categoryRouter.get("/list",authMiddleware,listCategories);
 
 export default categoryRouter;

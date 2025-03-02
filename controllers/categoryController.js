@@ -1,4 +1,5 @@
 import categoryModel from "../models/categoryModel.js";
+import userModel from "../models/userModel.js";
 import fs from "fs";
 
 // Add Category
@@ -51,16 +52,27 @@ const updateCategory = async (req, res) => {
   }
 };
 
-// Get All Categories
+// Get All Categories (Admin Only)
 const listCategories = async (req, res) => {
   try {
+    const { userId } = req.body; // Extract userId from request
+
+    // Check if user is an admin
+    const user = await userModel.findById(userId);
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "You are not an admin" });
+    }
+
+    // Fetch categories
     const categories = await categoryModel.find({});
     res.json({ success: true, data: categories });
+
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ success: false, message: "Error", error });
   }
 };
+
 
 // Delete Category
 const removeCategory = async (req, res) => {
