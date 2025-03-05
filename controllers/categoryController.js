@@ -55,14 +55,6 @@ const updateCategory = async (req, res) => {
 // Get All Categories (Admin Only)
 const listCategories = async (req, res) => {
   try {
-    const { userId } = req.body; // Extract userId from request
-
-    // Check if user is an admin
-    const user = await userModel.findById(userId);
-    if (!user || user.role !== "admin") {
-      return res.status(403).json({ success: false, message: "You are not an admin" });
-    }
-
     // Fetch categories
     const categories = await categoryModel.find({});
     res.json({ success: true, data: categories });

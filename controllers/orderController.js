@@ -56,6 +56,8 @@ const placeOrder = async (req, res) => {
       order_id: razorpayOrder.id,
       amount: razorpayOrder.amount,
       key: process.env.RAZORPAY_KEY_ID,
+      success_url: `/verify?success=true&orderId=${newOrder._id}`,
+      cancel_url: `/verify?success=false&orderId=${newOrder._id}`,
       userId,
     });
 
@@ -67,17 +69,20 @@ const placeOrder = async (req, res) => {
 
 const verifyOrder = async (req, res) => {
   const { orderId, success } = req.body;
-  console.log(orderId,success);
+  // console.log("Verifying order:", orderId, success);
   
   try {
     if (!orderId) {
       return res.json({ success: false, message: "Order ID is required" });
     }
+    
 
     if (success === "true") {
+       // Update order to mark payment as complete
       await orderModel.findByIdAndUpdate(orderId, { payment: true });
       res.json({ success: true, message: "Paid" });
     } else {
+      // Delete order if payment failed
       await orderModel.findByIdAndDelete(orderId);
       res.json({ success: false, message: "Not Paid" });
     }
