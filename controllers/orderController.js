@@ -137,5 +137,37 @@ const updateStatus = async (req, res) => {
   }
 };
 
+// New function to fetch order details for printing
+const printOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
 
-export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus };
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        orderId: order._id,
+        userId: order.userId,
+        items: order.items,
+        amount: order.amount,
+        address: order.address,
+        status: order.status,
+        payment: order.payment,
+        date: order.date,
+      },
+    });
+  } catch (error) {
+    console.error("Print Order Error:", error);
+    res.status(500).json({ success: false, message: "Error fetching order details" });
+  }
+};
+
+
+export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder };
