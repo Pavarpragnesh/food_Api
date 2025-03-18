@@ -1,5 +1,5 @@
 import categoryModel from "../models/categoryModel.js";
-import userModel from "../models/userModel.js";
+// import userModel from "../models/userModel.js";
 import fs from "fs";
 
 // Add Category
