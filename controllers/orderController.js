@@ -107,7 +107,7 @@ const userOrders = async (req,res) => {
 const listOrders = async (req, res) => {
   try {
     let userData = await userModel.findById(req.body.userId);
-    if (userData && userData.role === "admin") {
+    if (userData && userData.role === "admin" || userData.role === "delivery boy") {
       const orders = await orderModel.find({});
       res.json({ success: true, data: orders });
     } else {
@@ -123,7 +123,7 @@ const listOrders = async (req, res) => {
 const updateStatus = async (req, res) => {
   try {
     let userData = await userModel.findById(req.body.userId);
-    if (userData && userData.role === "admin") {
+    if (userData && userData.role === "admin" || userData.role === "delivery boy") {
       await orderModel.findByIdAndUpdate(req.body.orderId, {
         status: req.body.status,
       });
