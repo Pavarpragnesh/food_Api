@@ -106,12 +106,12 @@ const userOrders = async (req,res) => {
 // Listing orders for admin pannel
 const listOrders = async (req, res) => {
   try {
-    let userData = await userModel.findById(req.body.userId);
-    if (userData && userData.role === "admin" || userData.role === "delivery boy") {
+    const userData = await userModel.findById(req.body.userId);
+    if (userData && (userData.role === "admin" || userData.role === "delivery boy")) {
       const orders = await orderModel.find({});
       res.json({ success: true, data: orders });
     } else {
-      res.json({ success: false, message: "You are not admin" });
+      res.json({ success: false, message: "You are not authorized" });
     }
   } catch (error) {
     console.log(error);
@@ -169,5 +169,33 @@ const printOrder = async (req, res) => {
   }
 };
 
+const acceptOrder = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    const userData = await userModel.findById(req.body.userId);
 
-export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder };
+    if (!userData || userData.role !== "delivery boy") {
+      return res.json({ success: false, message: "Only delivery boys can accept orders" });
+    }
+
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Update the order with delivery boy details
+    order.acceptedBy = {
+      userId: userData._id,
+      name: userData.name,
+      mobile: userData.mobile,
+    };
+    await order.save();
+
+    res.json({ success: true, message: "Order accepted successfully" });
+  } catch (error) {
+    console.error("Accept Order Error:", error);
+    res.json({ success: false, message: "Error accepting order" });
+  }
+};
+
+export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder,acceptOrder };

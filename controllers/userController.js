@@ -32,7 +32,7 @@ const loginUser = async (req, res) => {
     }
 
     const token = createToken(user._id, user.role);
-    res.json({ success: true, token, role: user.role, photo: user.photo });
+    res.json({ success: true, token, role: user.role, photo: user.photo,name: user.name,mobile: user.mobile});
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: "Error" });
