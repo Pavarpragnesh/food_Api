@@ -17,7 +17,7 @@ const upload = multer({ storage: storage });
 
 
 foodRouter.post("/add", upload.single("image"), authMiddleware,addFood);
-// foodRouter.get("/list",listFood);
+ foodRouter.get("/list1",listFood);
 foodRouter.get("/list", listFoodWithPagination);
 foodRouter.post("/remove",authMiddleware,removeFood);
 foodRouter.post("/update", upload.single("image"),authMiddleware,updateFood); 
