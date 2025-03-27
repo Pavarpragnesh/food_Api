@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import authMiddleware from "../middleware/auth.js";
-import { addFood,listFood,removeFood,updateFood,listFoodWithPagination, rateFood   } from "../controllers/foodController.js";
+import { addFood,listFood,removeFood,updateFood,listFoodWithPagination, rateFood,getOrderRatings   } from "../controllers/foodController.js";
 
 const foodRouter = express.Router();
 
@@ -22,5 +22,6 @@ foodRouter.get("/list", listFoodWithPagination);
 foodRouter.post("/remove",authMiddleware,removeFood);
 foodRouter.post("/update", upload.single("image"),authMiddleware,updateFood);
 foodRouter.post("/rate", authMiddleware, rateFood); // New rating route 
+foodRouter.get("/rate/:orderId", authMiddleware, getOrderRatings);
 
 export default foodRouter;

@@ -211,4 +211,59 @@ const rateFood = async (req, res) => {
   }
 };
 
-export { addFood,listFood,removeFood,updateFood,listFoodWithPagination,rateFood  };
+// Add this to foodController.js
+const getOrderRatings = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Please log in." });
+    }
+
+    // Verify user from token
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: "Invalid token." });
+      }
+    } catch (error) {
+      console.error("JWT verification failed:", error);
+      return res.status(401).json({ success: false, message: "Session expired. Please log in again." });
+    }
+
+    // Fetch the order to verify ownership
+    const order = await orderModel.findById(orderId);
+    if (!order || order.userId !== userId) {
+      return res.status(403).json({ success: false, message: "Order not found or unauthorized" });
+    }
+
+    // Fetch ratings for all food items in the order
+    const foodIds = order.items.map((item) => item._id);
+    const foods = await foodModel.find({
+      _id: { $in: foodIds },
+      "ratings.orderId": orderId,
+      "ratings.userId": userId,
+    });
+
+    const ratings = {};
+    foods.forEach((food) => {
+      const rating = food.ratings.find(
+        (r) => r.orderId === orderId && r.userId === userId
+      );
+      if (rating) {
+        ratings[food._id] = rating.rating;
+      }
+    });
+
+    res.json({ success: true, ratings });
+  } catch (error) {
+    console.error("Error fetching ratings:", error);
+    res.status(500).json({ success: false, message: "Error fetching ratings" });
+  }
+};
+
+
+export { addFood,listFood,removeFood,updateFood,listFoodWithPagination,rateFood,getOrderRatings  };
