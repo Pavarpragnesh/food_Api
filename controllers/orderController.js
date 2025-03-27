@@ -123,17 +123,45 @@ const listOrders = async (req, res) => {
 const updateStatus = async (req, res) => {
   try {
     let userData = await userModel.findById(req.body.userId);
-    if (userData && userData.role === "admin" || userData.role === "delivery boy") {
-      await orderModel.findByIdAndUpdate(req.body.orderId, {
-        status: req.body.status,
-      });
-      res.json({ success: true, message: "Status Updated Successfully" });
-    }else{
-      res.json({ success: false, message: "You are not an admin" });
+    if (!userData || (userData.role !== "admin" && userData.role !== "delivery boy")) {
+      return res.json({ success: false, message: "You are not authorized" });
     }
+
+    const { orderId, status } = req.body;
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Calculate and update delivery charge if status is "Delivered"
+    if (status === "Delivered" && order.acceptedBy) {
+      const amount = order.amount;
+      let deliveryCharge = 0;
+
+      if (amount >= 100 && amount < 300) {
+        deliveryCharge = 50;
+      } else if (amount >= 300 && amount < 500) {
+        deliveryCharge = 70;
+      } else if (amount >= 500) {
+        deliveryCharge = 50;
+      }
+
+      // Update the order with the new status and delivery charge
+      order.status = status;
+      order.deliveryCharge = deliveryCharge;
+    } else {
+      // Update only the status if not "Delivered"
+      order.status = status;
+    }
+
+    // Save the updated order to the database
+    await order.save();
+
+    res.json({ success: true, message: "Status Updated Successfully" });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: "Error" });
+    console.error("Update Status Error:", error);
+    res.json({ success: false, message: "Error updating status" });
   }
 };
 
