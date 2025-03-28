@@ -122,6 +122,7 @@ const listOrders = async (req, res) => {
 // api for updating status
 const updateStatus = async (req, res) => {
   try {
+    // Check user authorization
     let userData = await userModel.findById(req.body.userId);
     if (!userData || (userData.role !== "admin" && userData.role !== "delivery boy")) {
       return res.json({ success: false, message: "You are not authorized" });
@@ -134,6 +135,26 @@ const updateStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    // Define the status flow
+    const statusFlow = {
+      "Food Processing": ["Out for delivery"],
+      "Out for delivery": ["Delivered"],
+      "Delivered": [], // No further transitions allowed
+    };
+
+    // Validate the status transition
+    const currentStatus = order.status;
+    const allowedNextStatuses = statusFlow[currentStatus] || [];
+
+    if (!allowedNextStatuses.includes(status)) {
+      return res.json({
+        success: false,
+        message: `Cannot change status from "${currentStatus}" to "${status}". Allowed next statuses: ${
+          allowedNextStatuses.length > 0 ? allowedNextStatuses.join(", ") : "none"
+        }`,
+      });
+    }
+
     // Calculate and update delivery charge if status is "Delivered"
     if (status === "Delivered" && order.acceptedBy) {
       const amount = order.amount;
@@ -144,7 +165,7 @@ const updateStatus = async (req, res) => {
       } else if (amount >= 300 && amount < 500) {
         deliveryCharge = 70;
       } else if (amount >= 500) {
-        deliveryCharge = 50;
+        deliveryCharge = 0; // Free delivery as per your earlier logic
       }
 
       // Update the order with the new status and delivery charge
@@ -164,7 +185,6 @@ const updateStatus = async (req, res) => {
     res.json({ success: false, message: "Error updating status" });
   }
 };
-
 // New function to fetch order details for printing
 const printOrder = async (req, res) => {
   try {
