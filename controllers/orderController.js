@@ -246,4 +246,35 @@ const acceptOrder = async (req, res) => {
   }
 };
 
-export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder,acceptOrder };
+// API to fetch top 5 most ordered dishes
+const getTopOrderedDishes = async (req, res) => {
+  try {
+    // Aggregate orders to count item frequencies
+    const topDishes = await orderModel.aggregate([
+      // Unwind the items array to process each item individually
+      { $unwind: "$items" },
+      // Group by item ID and count occurrences
+      {
+        $group: {
+          _id: "$items._id", // Group by item ID
+          name: { $first: "$items.name" }, // Get the item name
+          totalOrdered: { $sum: "$items.quantity" }, // Sum the quantities ordered
+          price: { $first: "$items.price" }, // Get the price (if stored in order)
+          image: { $first: "$items.image" }, // Get the image (if stored in order)
+          description: { $first: "$items.description" }, // Get the description (if stored in order)
+        },
+      },
+      // Sort by totalOrdered in descending order
+      { $sort: { totalOrdered: -1 } },
+      // Limit to top 4 items
+      { $limit: 5 },
+    ]);
+
+    res.json({ success: true, data: topDishes });
+  } catch (error) {
+    console.error("Error fetching top ordered dishes:", error);
+    res.json({ success: false, message: "Error fetching top ordered dishes" });
+  }
+};
+
+export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder,acceptOrder,getTopOrderedDishes };
