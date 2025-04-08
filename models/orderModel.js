@@ -18,6 +18,7 @@ const orderSchema = new mongoose.Schema({
     default: null 
   },
   deliveryCharge: { type: Number, default: 0 },
+  discount: { type: Number, default: 0 },
 })
 
 const orderModel = mongoose.models.order || mongoose.model("order",orderSchema);

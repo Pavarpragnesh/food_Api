@@ -11,7 +11,7 @@ const razorpay = new Razorpay({
 const placeOrder = async (req, res) => {
   const frontend_url = process.env.FRONTEND_URL || "http://localhost:3000";
   try {
-    const { items, amount, address } = req.body;
+    const { items, amount, address, deliveryFee, discount } = req.body;
 
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
@@ -37,6 +37,8 @@ const placeOrder = async (req, res) => {
       address,
       status: "Food Processing",
       payment: false,
+      deliveryCharge: deliveryFee || 0, // Use the deliveryFee from frontend, default to 0 if not provided
+      discount: discount || 0, // Use the discount from frontend, default to 0 if not provided
     });
 
     await newOrder.save();
@@ -49,7 +51,6 @@ const placeOrder = async (req, res) => {
       receipt: newOrder._id.toString(),
       payment_capture: 1,
     });
-
 
     return res.status(200).json({
       success: true,
@@ -208,6 +209,8 @@ const printOrder = async (req, res) => {
         address: order.address,
         status: order.status,
         payment: order.payment,
+        discount:order.discount,
+        deliveryCharge:order.deliveryCharge,
         date: order.date,
       },
     });
