@@ -1,5 +1,5 @@
 import express from "express";
-import { loginUser,registerUser,listUsers,deleteUser,editUser  } from "../controllers/userController.js";
+import { loginUser,registerUser,listUsers,deleteUser,editUser,listWithPagination  } from "../controllers/userController.js";
 import authMiddleware from "../middleware/auth.js";
 import multer from "multer";
 
@@ -20,6 +20,7 @@ const upload = multer({ storage });
 userRouter.post("/register", upload.single("photo"), registerUser);
 userRouter.post("/login",loginUser);
 userRouter.get("/list", listUsers); 
+userRouter.get("/list-with-pagination", listWithPagination);
 userRouter.delete("/delete/:id",authMiddleware, deleteUser);
 userRouter.put("/edit/:id", upload.single("photo"), authMiddleware,editUser);
 

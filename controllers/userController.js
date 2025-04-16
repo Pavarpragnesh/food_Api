@@ -173,5 +173,44 @@ const editUser = async (req, res) => {
   }
 };
 
+// List Users with Pagination
+const listWithPagination = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const searchUsername = req.query.searchUsername || "";
 
-export { loginUser, registerUser,listUsers,deleteUser,editUser };
+    let query = {};
+    if (searchUsername) {
+      query.name = new RegExp(searchUsername, "i"); // Case-insensitive search by name
+    }
+
+    const users = await userModel
+      .find(query, "-password") // Exclude passwords
+      .skip(skip)
+      .limit(limit)
+      .sort({ name: 1 }); // Sort by name (optional)
+
+    const totalUsers = await userModel.countDocuments(query);
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    res.json({
+      success: true,
+      data: users,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalUsers,
+        limit,
+      },
+    });
+  } catch (error) {
+    console.error("Pagination Error:", error);
+    res.status(500).json({ success: false, message: "Error fetching users with pagination" });
+  }
+};
+
+
+
+export { loginUser, registerUser,listUsers,deleteUser,editUser,listWithPagination };
