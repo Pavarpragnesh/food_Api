@@ -280,4 +280,86 @@ const getTopOrderedDishes = async (req, res) => {
   }
 };
 
-export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder,acceptOrder,getTopOrderedDishes };
+const listWithPagination = async (req, res) => {
+  try {
+    const userData = await userModel.findById(req.body.userId);
+    if (!userData || (userData.role !== "admin" && userData.role !== "delivery boy")) {
+      return res.json({ success: false, message: "You are not authorized" });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const firstName = req.query.firstName || "";
+    const lastName = req.query.lastName || "";
+
+    let query = {};
+    if (firstName) {
+      query = { ...query, "address.firstName": new RegExp(firstName, 'i') };
+    }
+    if (lastName) {
+      query = { ...query, "address.lastName": new RegExp(lastName, 'i') };
+    }
+
+    // Filter for delivery boy: show unaccepted orders or orders accepted by this delivery boy
+    if (userData.role === "delivery boy") {
+      query.$or = [
+        { acceptedBy: null }, // Unaccepted orders
+        { "acceptedBy.userId": userData._id }, // Orders accepted by this delivery boy
+      ];
+    }
+
+    const orders = await orderModel.find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ date: -1 });
+
+    const totalOrders = await orderModel.countDocuments(query);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalOrders,
+        limit,
+      },
+    });
+  } catch (error) {
+    console.error("Pagination Error:", error);
+    res.json({ success: false, message: "Error fetching orders with pagination" });
+  }
+};
+
+
+// New function: Search orders by firstName and lastName
+const searchOrderByName = async (req, res) => {
+  try {
+    const userData = await userModel.findById(req.body.userId);
+    if (!userData || (userData.role !== "admin" && userData.role !== "delivery boy")) {
+      return res.json({ success: false, message: "You are not authorized" });
+    }
+
+    const { firstName, lastName } = req.query;
+    if (!firstName && !lastName) {
+      return res.status(400).json({ success: false, message: "At least one of firstName or lastName is required" });
+    }
+
+    let query = {};
+    if (firstName) {
+      query = { ...query, "address.firstName": new RegExp(firstName, 'i') };
+    }
+    if (lastName) {
+      query = { ...query, "address.lastName": new RegExp(lastName, 'i') };
+    }
+
+    const orders = await orderModel.find(query);
+    res.json({ success: true, data: orders });
+  } catch (error) {
+    console.error("Search Order Error:", error);
+    res.json({ success: false, message: "Error searching orders" });
+  }
+};
+export { placeOrder,verifyOrder,userOrders,listOrders,updateStatus,printOrder,acceptOrder,getTopOrderedDishes,listWithPagination,searchOrderByName };
