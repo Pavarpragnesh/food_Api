@@ -1,6 +1,20 @@
 import offerModel from "../models/offerModel.js";
 import fs from "fs";
 
+// Utility function to update isActive for all offers
+const updateActiveStatus = async () => {
+  const currentDate = new Date();
+  const offers = await offerModel.find({});
+
+  for (let offer of offers) {
+    const shouldBeActive = offer.endDateTime && new Date(offer.endDateTime) >= currentDate;
+    if (offer.isActive !== shouldBeActive) { // Only update if status has changed
+      offer.isActive = shouldBeActive;
+      await offer.save();
+    }
+  }
+};
+
 // Add Offer
 const addOffer = async (req, res) => {
   try {
@@ -31,7 +45,8 @@ const addOffer = async (req, res) => {
       startDateTime,
       endDateTime,
       discountType,
-      discountValue
+      discountValue,
+      isActive: true // Initially set as active since it's a new offer
     });
 
     await offer.save();
@@ -45,8 +60,10 @@ const addOffer = async (req, res) => {
 // List Offers
 const listOffers = async (req, res) => {
   try {
-    const offers = await offerModel.find({}).sort({ createdAt: -1 });
-    res.json({ success: true, data: offers });
+    await updateActiveStatus(); // Ensure all offers have correct isActive status before listing
+
+    const updatedOffers = await offerModel.find({}).sort({ createdAt: -1 });
+    res.json({ success: true, data: updatedOffers });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Error", error });
@@ -85,8 +102,15 @@ const updateOffer = async (req, res) => {
       return res.status(400).json({ success: false, message: "Percentage discount must be between 0 and 100" });
     }
 
+    // Update isActive based on new endDateTime
+    const currentDate = new Date();
+    offer.isActive = new Date(offer.endDateTime) >= currentDate;
+
     await offer.save();
     res.json({ success: true, message: "Offer Updated Successfully.", offer });
+
+    // Optionally call updateActiveStatus to ensure all offers are checked
+    await updateActiveStatus();
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Error", error });
