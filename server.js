@@ -16,7 +16,13 @@ const port = 5001
 
 //middleware
 app.use(express.json())
-app.use(cors())
+// app.use(cors())
+// app.use(cors({ origin: 'http://10.0.2.2:5001' }));
+app.use(cors({
+  origin: '*', // Allow all origins (less secure, use for development only)
+  // methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  // credentials: true,
+}));
 
 //db connection
 connectDB();
